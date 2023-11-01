@@ -49,7 +49,7 @@ bool transformPoseInTargetFrame(
   try {
     transformed_pose = tf_buffer.transform(
       input_pose, target_frame,
-      tf2::durationFromSec(transform_timeout));
+      tf2::durationFromSec(2.0));
     return true;
   } catch (tf2::LookupException & ex) {
     RCLCPP_ERROR(
