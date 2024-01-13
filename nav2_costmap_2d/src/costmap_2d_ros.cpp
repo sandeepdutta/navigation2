@@ -152,6 +152,41 @@ Costmap2DROS::Costmap2DROS(
   declare_parameter("unknown_cost_value", rclcpp::ParameterValue(static_cast<unsigned char>(0xff)));
   declare_parameter("update_frequency", rclcpp::ParameterValue(5.0));
   declare_parameter("use_maximum", rclcpp::ParameterValue(false));
+  declare_parameter("stand_alone", rclcpp::ParameterValue(false));
+
+}
+
+Costmap2DROS::Costmap2DROS(const std::string & name)
+: Costmap2DROS(name, "/", name) {}
+
+Costmap2DROS::Costmap2DROS(const std::string & name , const std::string & local_namespace, const rclcpp::NodeOptions & options) 
+: nav2_util::LifecycleNode(name,local_namespace,options) {
+  decl_parameters();
+}
+
+Costmap2DROS::Costmap2DROS(
+  const std::string & name,
+  const std::string & parent_namespace,
+  const std::string & local_namespace)
+: nav2_util::LifecycleNode(name, "",
+    // NodeOption arguments take precedence over the ones provided on the command line
+    // use this to make sure the node is placed on the provided namespace
+    // TODO(orduno) Pass a sub-node instead of creating a new node for better handling
+    //              of the namespaces
+    rclcpp::NodeOptions().arguments({
+    "--ros-args", "-r", std::string("__ns:=") +
+    nav2_util::add_namespaces(parent_namespace, local_namespace),
+    "--ros-args", "-r", name + ":" + std::string("__node:=") + name
+  })),
+  name_(name),
+  parent_namespace_(parent_namespace),
+  default_plugins_{"static_layer", "obstacle_layer", "inflation_layer"},
+  default_types_{
+    "nav2_costmap_2d::StaticLayer",
+    "nav2_costmap_2d::ObstacleLayer",
+    "nav2_costmap_2d::InflationLayer"}
+{
+    decl_parameters();
 }
 
 Costmap2DROS::~Costmap2DROS()
@@ -301,6 +336,9 @@ Costmap2DROS::on_activate(const rclcpp_lifecycle::State & /*state*/)
   dyn_params_handler = this->add_on_set_parameters_callback(
     std::bind(&Costmap2DROS::dynamicParametersCallback, this, _1));
 
+  if (stand_alone_)
+    // create bond connection
+    createBond();
   return nav2_util::CallbackReturn::SUCCESS;
 }
 
@@ -377,7 +415,7 @@ Costmap2DROS::getParameters()
   get_parameter("width", map_width_meters_);
   get_parameter("plugins", plugin_names_);
   get_parameter("filters", filter_names_);
-
+  get_parameter("stand_alone",stand_alone_);
   auto node = shared_from_this();
 
   if (plugin_names_ == default_plugins_) {

@@ -76,6 +76,7 @@ public:
     const geometry_msgs::msg::Pose2D & pose, const nav_2d_msgs::msg::Twist2D & vel,
     const geometry_msgs::msg::Pose2D & goal, const nav_2d_msgs::msg::Path2D & global_plan) override;
   double scoreTrajectory(const dwb_msgs::msg::Trajectory2D & traj) override;
+  void debrief(const nav_2d_msgs::msg::Twist2D & cmd_vel) override;
   /**
    * @brief Assuming that this is an actual rotation when near the goal, score the trajectory.
    *
@@ -86,7 +87,47 @@ public:
    */
   virtual double scoreRotation(const dwb_msgs::msg::Trajectory2D & traj);
 
-private:
+private:  /**
+   * @class CommandTrend
+   * @brief Helper class for performing the same logic on the x,y and theta dimensions
+   */
+  class CommandTrend
+  {
+  public:
+    CommandTrend();
+    void reset();
+
+    /**
+     * @brief update internal flags based on the commanded velocity
+     * @param velocity commanded velocity for the dimension this trend is tracking
+     * @return true if the sign has flipped
+     */
+    bool update(double velocity);
+
+    /**
+     * @brief Check to see whether the proposed velocity would be considered oscillating
+     * @param velocity the velocity to evaluate
+     * @return true if the sign has flipped more than once
+     */
+    bool isOscillating(double velocity);
+
+    /**
+     * @brief Check whether we are currently tracking a flipped sign
+     * @return True if the sign has flipped
+     */
+    int signWillFlip(double velocity);
+
+  private:
+    // Simple Enum for Tracking
+    // cppcheck-suppress syntaxError
+    enum class Sign { ZERO, POSITIVE, NEGATIVE };
+
+    Sign sign_;
+    bool positive_only_, negative_only_;
+    double velocity_;
+  };
+  CommandTrend theta_trend_;
+  bool flag_set_;
   bool in_window_;
   bool rotating_;
   double goal_yaw_;

@@ -72,6 +72,9 @@ namespace nav2_costmap_2d
  * of PointCloud or LaserScan messages. */
 class Costmap2DROS : public nav2_util::LifecycleNode
 {
+private:
+  void decl_parameters();
+
 public:
   /**
    * @brief  Constructor for the wrapper
@@ -85,7 +88,9 @@ public:
    * @param name Name of the costmap ROS node
    */
   explicit Costmap2DROS(const std::string & name);
-
+  explicit Costmap2DROS(const std::string & name, 
+                        const std::string & local_namespace, 
+                        const rclcpp::NodeOptions & options = rclcpp::NodeOptions());
   /**
    * @brief  Constructor for the wrapper
    * @param name Name of the costmap ROS node
@@ -395,7 +400,7 @@ protected:
   double transform_tolerance_{0};  ///< The timeout before transform errors
 
   bool is_lifecycle_follower_{true};     ///< whether is a child-LifecycleNode or an independent node
-
+  bool stand_alone_{false};
   // Derived parameters
   bool use_radius_{false};
   std::vector<geometry_msgs::msg::Point> unpadded_footprint_;

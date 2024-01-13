@@ -46,6 +46,56 @@ PLUGINLIB_EXPORT_CLASS(dwb_critics::RotateToGoalCritic, dwb_core::TrajectoryCrit
 namespace dwb_critics
 {
 
+
+
+RotateToGoalCritic::CommandTrend::CommandTrend()
+{
+  reset();
+}
+
+void RotateToGoalCritic::CommandTrend::reset()
+{
+  sign_ = Sign::ZERO;
+  positive_only_ = false;
+  negative_only_ = false;
+  velocity_ = 0.0;
+}
+
+bool RotateToGoalCritic::CommandTrend::update(double velocity)
+{
+  bool flag_set = false;
+  if (velocity < 0.0) {
+    if (sign_ == Sign::POSITIVE) {
+      negative_only_ = true;
+      flag_set = true;
+    }
+    sign_ = Sign::NEGATIVE;
+  } else if (velocity > 0.0) {
+    if (sign_ == Sign::NEGATIVE) {
+      positive_only_ = true;
+      flag_set = true;
+    }
+    sign_ = Sign::POSITIVE;
+  }
+  velocity_ = velocity;
+  return flag_set;
+}
+
+bool RotateToGoalCritic::CommandTrend::isOscillating(double velocity)
+{
+  return (positive_only_ && velocity < 0.0) || (negative_only_ && velocity > 0.0);
+}
+
+int RotateToGoalCritic::CommandTrend::signWillFlip(double velocity)
+{
+  return signbit(velocity) != signbit(velocity_);
+}
+
+void RotateToGoalCritic::debrief(const nav_2d_msgs::msg::Twist2D & cmd_vel)
+{
+  flag_set_ = theta_trend_.update(cmd_vel.theta);
+}
+
 inline double hypot_sq(double dx, double dy)
 {
   return dx * dx + dy * dy;
@@ -79,6 +129,7 @@ void RotateToGoalCritic::reset()
 {
   in_window_ = false;
   rotating_ = false;
+  theta_trend_.reset();
 }
 
 bool RotateToGoalCritic::prepare(
@@ -129,7 +180,8 @@ double RotateToGoalCritic::scoreRotation(const dwb_msgs::msg::Trajectory2D & tra
   } else {
     end_yaw = traj.poses.back().theta;
   }
-  return fabs(angles::shortest_angular_distance(end_yaw, goal_yaw_));
+  return fabs(angles::shortest_angular_distance(end_yaw, goal_yaw_)) ;
+         //10.0*theta_trend_.signWillFlip(traj.velocity.theta); 
 }
 
 }  // namespace dwb_critics

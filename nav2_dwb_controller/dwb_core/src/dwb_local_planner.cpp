@@ -139,6 +139,9 @@ void DWBLocalPlanner::configure(
     RCLCPP_ERROR(logger_, "Couldn't load critics! Caught exception: %s", e.what());
     throw;
   }
+  // Diagnostics message
+  diagnostic_publisher_ = node->create_publisher<diagnostic_msgs::msg::DiagnosticArray>(
+    DEFAULT_DIAGNOSTICS_TOPIC,rclcpp::SystemDefaultsQoS());
 }
 
 void
@@ -236,6 +239,13 @@ DWBLocalPlanner::setPlan(const nav_msgs::msg::Path & path)
 
   pub_->publishGlobalPlan(path2d);
   global_plan_ = path2d;
+  if (diagnostic_publisher_->get_subscription_count() > 0) {
+      auto gkv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
+      gkv->key = "Global Plan " ;
+      gkv->value =  nav_msgs::msg::to_yaml(path);
+      std::replace(gkv->value.begin(),gkv->value.end(),'\n',';');
+      diag_key_values_.push_back(gkv);
+  }
 }
 
 geometry_msgs::msg::TwistStamped
@@ -295,7 +305,11 @@ DWBLocalPlanner::computeVelocityCommands(
   nav_2d_msgs::msg::Pose2DStamped goal_pose;
 
   prepareGlobalPlan(pose, transformed_plan, goal_pose);
-
+  diag_array_.header.stamp = clock_->now();
+  diag_status_.name = "DWBLocalPlanner ";
+  diag_status_.hardware_id = "0xf1";
+  diag_status_.level = diagnostic_msgs::msg::DiagnosticStatus::OK;
+  diag_status_.message = "DWBLocalPlanner:Diagnostics";
   nav2_costmap_2d::Costmap2D * costmap = costmap_ros_->getCostmap();
   std::unique_lock<nav2_costmap_2d::Costmap2D::mutex_t> lock(*(costmap->getMutex()));
 
@@ -312,7 +326,35 @@ DWBLocalPlanner::computeVelocityCommands(
     nav_2d_msgs::msg::Twist2DStamped cmd_vel;
     cmd_vel.header.stamp = clock_->now();
     cmd_vel.velocity = best.traj.velocity;
+    // if someone is listening to diagnostics
+    if (diagnostic_publisher_->get_subscription_count() > 0) {
+      auto bkv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
+      bkv->key = "Best trajectory " ;
+      std::string btj = nav_2d_msgs::msg::to_yaml(best.traj.velocity);
+      std::replace(btj.begin(),btj.end(),'\n',';');
+      bkv->value =  btj;
+      diag_key_values_.push_back(bkv);
+      auto gkv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
+      gkv->key = "Goal pose " ;
+      gkv->value =  nav_2d_msgs::msg::to_yaml(goal_pose);
+      std::replace(gkv->value.begin(),gkv->value.end(),'\n',';');
+      diag_key_values_.push_back(gkv);
+      auto ckv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
+      ckv->key = "Current pose " ;
+      ckv->value =  nav_2d_msgs::msg::to_yaml(pose);
+      std::replace(ckv->value.begin(),ckv->value.end(),'\n',';');
+      diag_key_values_.push_back(ckv);
 
+      for (const auto kv : diag_key_values_) {
+        diag_status_.values.push_back(*kv);
+      }
+      diag_array_.status.push_back(diag_status_);
+      diagnostic_publisher_->publish(diag_array_);
+      // clear all diagnostics
+      diag_key_values_.clear();
+      diag_status_.values.clear();
+      diag_array_.status.clear();
+    }
     // debrief stateful scoring functions
     for (TrajectoryCritic::Ptr & critic : critics_) {
       critic->debrief(cmd_vel.velocity);
@@ -377,6 +419,12 @@ DWBLocalPlanner::coreScoringAlgorithm(
           results->worst_index = results->twists.size() - 1;
         }
       }
+      if (diagnostic_publisher_->get_subscription_count() > 0) {
+        auto tkv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
+        tkv->key = "Trajectory";
+        tkv->value = dwb_msgs::msg::to_yaml(traj);
+        diag_key_values_.push_back(tkv);
+      }
     } catch (const dwb_core::IllegalTrajectoryException & e) {
       if (results) {
         dwb_msgs::msg::TrajectoryScore failed_score;
@@ -421,7 +469,6 @@ DWBLocalPlanner::scoreTrajectory(
     dwb_msgs::msg::CriticScore cs;
     cs.name = critic->getName();
     cs.scale = critic->getScale();
-
     if (cs.scale == 0.0) {
       score.scores.push_back(cs);
       continue;
@@ -431,6 +478,12 @@ DWBLocalPlanner::scoreTrajectory(
     cs.raw_score = critic_score;
     score.scores.push_back(cs);
     score.total += critic_score * cs.scale;
+    if (diagnostic_publisher_->get_subscription_count() > 0) {
+      std::shared_ptr<diagnostic_msgs::msg::KeyValue> kv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
+      kv->value += "score " + std::to_string(critic_score) + " score total " + std::to_string(score.total) + " best_score " + std::to_string(best_score);
+      kv->key  = cs.name;
+      diag_key_values_.push_back(kv);
+    }
     if (short_circuit_trajectory_evaluation_ && best_score > 0 && score.total > best_score) {
       // since we keep adding positives, once we are worse than the best, we will stay worse
       break;

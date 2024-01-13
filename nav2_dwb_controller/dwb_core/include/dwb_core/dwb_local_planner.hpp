@@ -50,6 +50,11 @@
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include "pluginlib/class_loader.hpp"
 #include "pluginlib/class_list_macros.hpp"
+#include "diagnostic_msgs/msg/diagnostic_array.hpp"
+#include "diagnostic_msgs/msg/diagnostic_status.hpp"
+#include "diagnostic_msgs/msg/key_value.hpp"
+
+#define DEFAULT_DIAGNOSTICS_TOPIC "~/diagnostics"
 
 namespace dwb_core
 {
@@ -237,6 +242,11 @@ protected:
   std::string dwb_plugin_name_;
 
   bool short_circuit_trajectory_evaluation_;
+  // diagnostics publisher
+  std::shared_ptr<rclcpp::Publisher<diagnostic_msgs::msg::DiagnosticArray>> diagnostic_publisher_ = nullptr;
+  diagnostic_msgs::msg::DiagnosticArray diag_array_;
+  diagnostic_msgs::msg::DiagnosticStatus diag_status_;
+  std::vector<std::shared_ptr<diagnostic_msgs::msg::KeyValue>> diag_key_values_;
 };
 
 }  // namespace dwb_core
