@@ -402,7 +402,7 @@ ObstacleLayer::pointCloud2Callback(
   sensor_msgs::msg::PointCloud2::ConstSharedPtr message,
   const std::shared_ptr<ObservationBuffer> & buffer)
 {
-  RCLCPP_INFO(logger_,"Pointcloud received call back");
+  RCLCPP_DEBUG(logger_,"Pointcloud received call back");
   // buffer the point cloud
   buffer->lock();
   buffer->bufferCloud(*message);
