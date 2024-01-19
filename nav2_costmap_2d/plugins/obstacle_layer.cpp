@@ -220,7 +220,8 @@ void ObstacleLayer::onInitialize()
 
     rmw_qos_profile_t custom_qos_profile = rmw_qos_profile_sensor_data;
     custom_qos_profile.depth = 50;
-
+    custom_qos_profile.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
+    
     // create a callback for the topic
     if (data_type == "LaserScan") {
       auto sub = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::LaserScan,
@@ -328,7 +329,7 @@ ObstacleLayer::laserScanCallback(
   // project the laser into a point cloud
   sensor_msgs::msg::PointCloud2 cloud;
   cloud.header = message->header;
-
+  RCLCPP_DEBUG(logger_,"Laser scan call back");
   // project the scan into a point cloud
   try {
     projector_.transformLaserScanToPointCloud(message->header.frame_id, *message, cloud, *tf_);
@@ -362,6 +363,7 @@ ObstacleLayer::laserScanValidInfCallback(
   // Filter positive infinities ("Inf"s) to max_range.
   float epsilon = 0.0001;  // a tenth of a millimeter
   sensor_msgs::msg::LaserScan message = *raw_message;
+  RCLCPP_INFO(logger_,"laserScan callback");
   for (size_t i = 0; i < message.ranges.size(); i++) {
     float range = message.ranges[i];
     if (!std::isfinite(range) && range > 0) {
