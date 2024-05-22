@@ -47,9 +47,13 @@ bool transformPoseInTargetFrame(
   static rclcpp::Logger logger = rclcpp::get_logger("transformPoseInTargetFrame");
 
   try {
-    transformed_pose = tf_buffer.transform(
-      input_pose, target_frame,
-      tf2::durationFromSec(2.0));
+    auto transformStamped = tf_buffer.lookupTransform(
+                              target_frame,input_pose.header.frame_id,
+                              tf2::TimePointZero);//tf2::durationFromSec(transform_timeout));
+    tf2::doTransform(input_pose, transformed_pose, transformStamped);
+    //transformed_pose = tf_buffer.transform(
+    //  input_pose, target_frame,
+    //  tf2::durationFromSec(10.0));
     return true;
   } catch (tf2::LookupException & ex) {
     RCLCPP_ERROR(

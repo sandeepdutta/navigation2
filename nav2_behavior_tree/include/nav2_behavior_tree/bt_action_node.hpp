@@ -221,8 +221,8 @@ public:
           // if server has taken more time than the specified timeout value return FAILURE
           RCLCPP_WARN(
             node_->get_logger(),
-            "Timed out while waiting for action server to acknowledge goal request for %s",
-            action_name_.c_str());
+            "Timed out while waiting for action server to acknowledge goal request for  %ld %ld %s",
+            elapsed.count(), server_timeout_.count(),action_name_.c_str());
           future_goal_handle_.reset();
           return BT::NodeStatus::FAILURE;
         }
@@ -249,8 +249,8 @@ public:
             }
             RCLCPP_WARN(
               node_->get_logger(),
-              "Timed out while waiting for action server to acknowledge goal request for %s",
-              action_name_.c_str());
+              "Timed out while waiting for action server to acknowledge goal request for %ld %ld %s",
+              elapsed.count(), server_timeout_.count(), action_name_.c_str());
             future_goal_handle_.reset();
             return BT::NodeStatus::FAILURE;
           }

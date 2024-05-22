@@ -142,6 +142,9 @@ LatticeMetadata LatticeMotionTable::getLatticeMetadata(const std::string & latti
 {
   std::ifstream lattice_file(lattice_filepath);
   if (!lattice_file.is_open()) {
+    RCLCPP_ERROR(
+      rclcpp::get_logger("nav2_smac_planner"),
+      "Could not open lattice file: %s", lattice_filepath.c_str());
     throw std::runtime_error("Could not open lattice file!");
   }
 

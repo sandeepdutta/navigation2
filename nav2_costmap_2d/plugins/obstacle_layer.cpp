@@ -329,7 +329,7 @@ ObstacleLayer::laserScanCallback(
   // project the laser into a point cloud
   sensor_msgs::msg::PointCloud2 cloud;
   cloud.header = message->header;
-  RCLCPP_DEBUG(logger_,"Laser scan call back");
+  RCLCPP_INFO(logger_,"Laser scan call back");
   // project the scan into a point cloud
   try {
     projector_.transformLaserScanToPointCloud(message->header.frame_id, *message, cloud, *tf_);
@@ -462,13 +462,13 @@ ObstacleLayer::updateBounds(
 
       // if the obstacle is too low, we won't add it
       if (pz < min_obstacle_height_) {
-        RCLCPP_DEBUG(logger_, "The point is too low");
+        RCLCPP_INFO(logger_, "The point is too low %f", pz);
         continue;
       }
 
       // if the obstacle is too high or too far away from the robot we won't add it
       if (pz > max_obstacle_height_) {
-        RCLCPP_DEBUG(logger_, "The point is too high");
+        RCLCPP_INFO(logger_, "The point is too high %f", pz);
         continue;
       }
 
@@ -480,13 +480,13 @@ ObstacleLayer::updateBounds(
 
       // if the point is far enough away... we won't consider it
       if (sq_dist >= sq_obstacle_max_range) {
-        RCLCPP_DEBUG(logger_, "The point is too far away");
+        RCLCPP_DEBUG(logger_, "The point is too far away %f",sq_dist);
         continue;
       }
 
       // if the point is too close, do not conisder it
       if (sq_dist < sq_obstacle_min_range) {
-        RCLCPP_DEBUG(logger_, "The point is too close");
+        RCLCPP_DEBUG(logger_, "The point is too close %f", sq_dist);
         continue;
       }
 
