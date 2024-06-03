@@ -86,7 +86,7 @@ PlannerServer::on_configure(const rclcpp_lifecycle::State & /*state*/)
   // Launch a thread to run the costmap node
   costmap_thread_ = std::make_unique<nav2_util::NodeThread>(costmap_ros_);
 
-  RCLCPP_DEBUG(
+  RCLCPP_INFO(
     get_logger(), "Costmap size: %d,%d",
     costmap_->getSizeInCellsX(), costmap_->getSizeInCellsY());
 

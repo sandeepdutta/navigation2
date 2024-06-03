@@ -20,7 +20,7 @@ find_package(pluginlib REQUIRED)
 find_package(nav2_core REQUIRED)
 
 nav2_package()
-
+add_compile_options(-pg)
 include_directories(
   include
 )
@@ -63,7 +63,8 @@ target_link_libraries(${executable_name} ${library_name})
 ament_target_dependencies(${executable_name}
   ${dependencies}
 )
-
+target_compile_options(${library_name} PRIVATE -pg)
+target_link_options(${library_name} PRIVATE -pg)
 rclcpp_components_register_nodes(${library_name} "nav2_planner::PlannerServer")
 
 install(TARGETS ${library_name}

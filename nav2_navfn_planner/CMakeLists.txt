@@ -51,7 +51,8 @@ add_library(${library_name} SHARED
 ament_target_dependencies(${library_name}
   ${dependencies}
 )
-
+target_compile_options(${library_name} PRIVATE -pg)
+target_link_options(${library_name} PRIVATE -pg)
 pluginlib_export_plugin_description_file(nav2_core global_planner_plugin.xml)
 
 install(TARGETS ${library_name}
