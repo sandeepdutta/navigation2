@@ -345,7 +345,7 @@ DWBLocalPlanner::computeVelocityCommands(
       std::replace(ckv->value.begin(),ckv->value.end(),'\n',';');
       diag_key_values_.push_back(ckv);
 
-      for (const auto kv : diag_key_values_) {
+      for (const auto &kv : diag_key_values_) {
         diag_status_.values.push_back(*kv);
       }
       diag_array_.status.push_back(diag_status_);
