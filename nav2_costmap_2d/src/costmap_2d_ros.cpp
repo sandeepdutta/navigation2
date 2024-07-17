@@ -58,8 +58,8 @@ using rcl_interfaces::msg::ParameterType;
 
 namespace nav2_costmap_2d
 {
-Costmap2DROS::Costmap2DROS(const std::string & name)
-: Costmap2DROS(name, "/", name) {}
+//Costmap2DROS::Costmap2DROS(const std::string & name)
+//: Costmap2DROS(name, "/", name) {}
 
 Costmap2DROS::Costmap2DROS(const rclcpp::NodeOptions & options)
 : nav2_util::LifecycleNode("costmap", "", options),
@@ -156,38 +156,63 @@ Costmap2DROS::Costmap2DROS(
 
 }
 
-Costmap2DROS::Costmap2DROS(const std::string & name)
-: Costmap2DROS(name, "/", name) {}
-
 Costmap2DROS::Costmap2DROS(const std::string & name , const std::string & local_namespace, const rclcpp::NodeOptions & options) 
 : nav2_util::LifecycleNode(name,local_namespace,options) {
-  decl_parameters();
+  RCLCPP_INFO(get_logger(), "Creating Costmap");
+
+  declare_parameter("always_send_full_costmap", rclcpp::ParameterValue(false));
+  declare_parameter("footprint_padding", rclcpp::ParameterValue(0.01f));
+  declare_parameter("footprint", rclcpp::ParameterValue(std::string("[]")));
+  declare_parameter("global_frame", rclcpp::ParameterValue(std::string("map")));
+  declare_parameter("height", rclcpp::ParameterValue(5));
+  declare_parameter("width", rclcpp::ParameterValue(5));
+  declare_parameter("lethal_cost_threshold", rclcpp::ParameterValue(100));
+  declare_parameter(
+    "map_topic", rclcpp::ParameterValue(
+      (parent_namespace_ == "/" ? "/" : parent_namespace_ + "/") + std::string("map")));
+  declare_parameter("observation_sources", rclcpp::ParameterValue(std::string("")));
+  declare_parameter("origin_x", rclcpp::ParameterValue(0.0));
+  declare_parameter("origin_y", rclcpp::ParameterValue(0.0));
+  declare_parameter("plugins", rclcpp::ParameterValue(default_plugins_));
+  declare_parameter("filters", rclcpp::ParameterValue(std::vector<std::string>()));
+  declare_parameter("publish_frequency", rclcpp::ParameterValue(1.0));
+  declare_parameter("resolution", rclcpp::ParameterValue(0.1));
+  declare_parameter("robot_base_frame", rclcpp::ParameterValue(std::string("base_link")));
+  declare_parameter("robot_radius", rclcpp::ParameterValue(0.1));
+  declare_parameter("rolling_window", rclcpp::ParameterValue(false));
+  declare_parameter("track_unknown_space", rclcpp::ParameterValue(false));
+  declare_parameter("transform_tolerance", rclcpp::ParameterValue(0.3));
+  declare_parameter("trinary_costmap", rclcpp::ParameterValue(true));
+  declare_parameter("unknown_cost_value", rclcpp::ParameterValue(static_cast<unsigned char>(0xff)));
+  declare_parameter("update_frequency", rclcpp::ParameterValue(5.0));
+  declare_parameter("use_maximum", rclcpp::ParameterValue(false));
+  declare_parameter("stand_alone", rclcpp::ParameterValue(false));
 }
 
-Costmap2DROS::Costmap2DROS(
-  const std::string & name,
-  const std::string & parent_namespace,
-  const std::string & local_namespace)
-: nav2_util::LifecycleNode(name, "",
-    // NodeOption arguments take precedence over the ones provided on the command line
-    // use this to make sure the node is placed on the provided namespace
-    // TODO(orduno) Pass a sub-node instead of creating a new node for better handling
-    //              of the namespaces
-    rclcpp::NodeOptions().arguments({
-    "--ros-args", "-r", std::string("__ns:=") +
-    nav2_util::add_namespaces(parent_namespace, local_namespace),
-    "--ros-args", "-r", name + ":" + std::string("__node:=") + name
-  })),
-  name_(name),
-  parent_namespace_(parent_namespace),
-  default_plugins_{"static_layer", "obstacle_layer", "inflation_layer"},
-  default_types_{
-    "nav2_costmap_2d::StaticLayer",
-    "nav2_costmap_2d::ObstacleLayer",
-    "nav2_costmap_2d::InflationLayer"}
-{
-    decl_parameters();
-}
+//Costmap2DROS::Costmap2DROS(
+//  const std::string & name,
+//  const std::string & parent_namespace,
+//  const std::string & local_namespace)
+//: nav2_util::LifecycleNode(name, "",
+//    // NodeOption arguments take precedence over the ones provided on the command line
+//    // use this to make sure the node is placed on the provided namespace
+//    // TODO(orduno) Pass a sub-node instead of creating a new node for better handling
+//    //              of the namespaces
+//    rclcpp::NodeOptions().arguments({
+//    "--ros-args", "-r", std::string("__ns:=") +
+//    nav2_util::add_namespaces(parent_namespace, local_namespace),
+//    "--ros-args", "-r", name + ":" + std::string("__node:=") + name
+//  })),
+//  name_(name),
+//  parent_namespace_(parent_namespace),
+//  default_plugins_{"static_layer", "obstacle_layer", "inflation_layer"},
+//  default_types_{
+//    "nav2_costmap_2d::StaticLayer",
+//    "nav2_costmap_2d::ObstacleLayer",
+//    "nav2_costmap_2d::InflationLayer"}
+//{
+//    decl_parameters();
+//}
 
 Costmap2DROS::~Costmap2DROS()
 {
