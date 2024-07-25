@@ -329,9 +329,10 @@ DWBLocalPlanner::computeVelocityCommands(
     // if someone is listening to diagnostics
     if (diagnostic_publisher_->get_subscription_count() > 0) {
       auto bkv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
-      bkv->key = "Best trajectory " ;
-      std::string btj = nav_2d_msgs::msg::to_yaml(best.traj.velocity);
-      std::replace(btj.begin(),btj.end(),'\n',';');
+      bkv->key = "Best trajectory" ;
+      auto traj = best.traj;
+      std::string btj = dwb_msgs::msg::to_yaml(traj);
+      //std::replace(btj.begin(),btj.end(),'\n',';');
       bkv->value =  btj;
       diag_key_values_.push_back(bkv);
       auto gkv = std::make_shared<diagnostic_msgs::msg::KeyValue>();
