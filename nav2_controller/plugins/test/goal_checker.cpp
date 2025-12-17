@@ -240,100 +240,65 @@ TEST(StoppedGoalChecker, get_tol_and_dynamic_params)
   EXPECT_EQ(pose_tol.position.y, 200.0);
 }
 
-TEST(StoppedGoalChecker, is_reached)
+TEST(SimpleGoalChecker, symmetric_yaw_tolerance_disabled)
 {
-  auto x = std::make_shared<TestLifecycleNode>("goal_checker");
+  auto x = std::make_shared<TestLifecycleNode>("goal_checker_symmetric");
 
   SimpleGoalChecker gc;
-  StoppedGoalChecker sgc;
   auto costmap = std::make_shared<nav2_costmap_2d::Costmap2DROS>("test_costmap");
 
-  sgc.initialize(x, "test", costmap);
-  gc.initialize(x, "test2", costmap);
-  geometry_msgs::msg::Pose goal_pose;
-  geometry_msgs::msg::Twist velocity;
-  geometry_msgs::msg::Pose current_pose;
+  gc.initialize(x, "symmetric_test", costmap);
 
-  // Current linear x position is tolerance away from goal
-  current_pose.position.x = 0.25;
-  velocity.linear.x = 0.25;
-  EXPECT_TRUE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_TRUE(gc.isGoalReached(current_pose, goal_pose, velocity));
-  sgc.reset();
-  gc.reset();
+  // Test that with symmetric_yaw_tolerance disabled (default),
+  // robot at 0 rad and goal at PI rad is NOT reached
+  // (only exact goal orientation or close to it is accepted)
+  checkMacro(gc, 0, 0, 0, 0, 0, 3.14159, 0, 0, 0, false);
+}
 
-  // Current linear x speed exceeds tolerance
-  velocity.linear.x = 0.25 + std::numeric_limits<double>::epsilon();
-  EXPECT_FALSE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_TRUE(gc.isGoalReached(current_pose, goal_pose, velocity));
-  sgc.reset();
-  gc.reset();
+TEST(SimpleGoalChecker, symmetric_yaw_tolerance_enabled)
+{
+  auto x = std::make_shared<TestLifecycleNode>("goal_checker_symmetric_enabled");
 
-  // Current linear x position is further than tolerance away from goal
-  current_pose.position.x = 0.25 + std::numeric_limits<double>::epsilon();
-  velocity.linear.x = 0.25;
-  EXPECT_FALSE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_FALSE(gc.isGoalReached(current_pose, goal_pose, velocity));
-  sgc.reset();
-  gc.reset();
-  current_pose.position.x = 0.0;
-  velocity.linear.x = 0.0;
+  SimpleGoalChecker gc;
+  auto costmap = std::make_shared<nav2_costmap_2d::Costmap2DROS>("test_costmap");
 
-  // Current linear position is tolerance away from goal
-  current_pose.position.x = 0.25 / std::sqrt(2);
-  current_pose.position.y = 0.25 / std::sqrt(2);
-  velocity.linear.x = 0.25 / std::sqrt(2);
-  velocity.linear.y = 0.25 / std::sqrt(2);
-  EXPECT_TRUE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_TRUE(gc.isGoalReached(current_pose, goal_pose, velocity));
-  sgc.reset();
-  gc.reset();
+  gc.initialize(x, "symmetric_test2", costmap);
 
-  // Current linear speed exceeds tolerance
-  velocity.linear.x = 0.25 / std::sqrt(2) + std::numeric_limits<double>::epsilon();
-  velocity.linear.y = 0.25 / std::sqrt(2) + std::numeric_limits<double>::epsilon();
-  EXPECT_FALSE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_TRUE(gc.isGoalReached(current_pose, goal_pose, velocity));
-  sgc.reset();
-  gc.reset();
-
-  // Current linear position is further than tolerance away from goal
-  current_pose.position.x = 0.25 / std::sqrt(2) + std::numeric_limits<double>::epsilon();
-  current_pose.position.y = 0.25 / std::sqrt(2) + std::numeric_limits<double>::epsilon();
-  velocity.linear.x = 0.25 / std::sqrt(2);
-  velocity.linear.y = 0.25 / std::sqrt(2);
-  EXPECT_FALSE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_FALSE(gc.isGoalReached(current_pose, goal_pose, velocity));
-  sgc.reset();
-  gc.reset();
-
-  current_pose.position.x = 0.0;
-  velocity.linear.x = 0.0;
-
-  // Current angular speed exceeds tolerance
-  velocity.angular.z = 0.25 + std::numeric_limits<double>::epsilon();
-  EXPECT_FALSE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_TRUE(gc.isGoalReached(current_pose, goal_pose, velocity));
-  sgc.reset();
-  gc.reset();
-
-  current_pose.orientation = nav2_util::geometry_utils::orientationAroundZAxis(0.25 + M_PI);
-  EXPECT_FALSE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_FALSE(gc.isGoalReached(current_pose, goal_pose, velocity));
-
+  // Enable symmetric_yaw_tolerance
   auto rec_param = std::make_shared<rclcpp::AsyncParametersClient>(
     x->get_node_base_interface(), x->get_node_topics_interface(),
     x->get_node_graph_interface(),
     x->get_node_services_interface());
+
   auto results = rec_param->set_parameters_atomically(
-    {rclcpp::Parameter("test2.symmetric_yaw_tolerance", true),
-      rclcpp::Parameter("test.symmetric_yaw_tolerance", true)});
+    {rclcpp::Parameter("symmetric_test2.symmetric_yaw_tolerance", true),
+      rclcpp::Parameter("symmetric_test2.yaw_goal_tolerance", 0.3)});
+
   rclcpp::spin_until_future_complete(
     x->get_node_base_interface(),
     results);
-  velocity.angular.z = 0.0;
-  EXPECT_TRUE(sgc.isGoalReached(current_pose, goal_pose, velocity));
-  EXPECT_TRUE(gc.isGoalReached(current_pose, goal_pose, velocity));
+
+  EXPECT_EQ(x->get_parameter("symmetric_test2.symmetric_yaw_tolerance").as_bool(), true);
+
+  // Test that with symmetric_yaw_tolerance enabled,
+  // robot at 0 rad and goal at PI rad IS reached
+  // (because robot can face backward, which is PI rad)
+  checkMacro(gc, 0, 0, 0, 0, 0, 3.14159, 0, 0, 0, true);
+
+  // Test that forward orientation still works
+  checkMacro(gc, 0, 0, 0, 0, 0, 0, 0, 0, 0, true);
+
+  // Test that intermediate angles work with tolerance
+  checkMacro(gc, 0, 0, 0.1, 0, 0, 0, 0, 0, 0, true);
+  checkMacro(gc, 0, 0, -0.1, 0, 0, 0, 0, 0, 0, true);
+
+  // Test that intermediate angles work for backward (PI) orientation
+  checkMacro(gc, 0, 0, 3.14159 + 0.1, 0, 0, 3.14159, 0, 0, 0, true);
+  checkMacro(gc, 0, 0, 3.14159 - 0.1, 0, 0, 3.14159, 0, 0, 0, true);
+
+  // Test that angles outside tolerance are not reached
+  checkMacro(gc, 0, 0, 1.0, 0, 0, 0, 0, 0, 0, false);
+  checkMacro(gc, 0, 0, 1.5, 0, 0, 3.14159, 0, 0, 0, false);
 }
 
 int main(int argc, char ** argv)
