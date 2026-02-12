@@ -58,7 +58,6 @@ SimpleGoalChecker::SimpleGoalChecker()
   stateful_(true),
   check_xy_(true),
   symmetric_yaw_tolerance_(false),
-  symmetric_yaw_tolerance_(false),
   xy_goal_tolerance_sq_(0.0625)
 {
 }
@@ -83,14 +82,10 @@ void SimpleGoalChecker::initialize(
   nav2_util::declare_parameter_if_not_declared(
     node,
     plugin_name + ".symmetric_yaw_tolerance", rclcpp::ParameterValue(false));
-  nav2_util::declare_parameter_if_not_declared(
-    node,
-    plugin_name + ".symmetric_yaw_tolerance", rclcpp::ParameterValue(false));
 
   node->get_parameter(plugin_name + ".xy_goal_tolerance", xy_goal_tolerance_);
   node->get_parameter(plugin_name + ".yaw_goal_tolerance", yaw_goal_tolerance_);
   node->get_parameter(plugin_name + ".stateful", stateful_);
-  node->get_parameter(plugin_name + ".symmetric_yaw_tolerance", symmetric_yaw_tolerance_);
   node->get_parameter(plugin_name + ".symmetric_yaw_tolerance", symmetric_yaw_tolerance_);
 
   xy_goal_tolerance_sq_ = xy_goal_tolerance_ * xy_goal_tolerance_;
@@ -124,22 +119,19 @@ bool SimpleGoalChecker::isGoalReached(
 
   double query_yaw = tf2::getYaw(query_pose.orientation);
   double goal_yaw = tf2::getYaw(goal_pose.orientation);
-
   if (symmetric_yaw_tolerance_) {
     // For symmetric robots: accept either goal orientation or goal + 180°
     double dyaw_forward = angles::shortest_angular_distance(query_yaw, goal_yaw);
     double dyaw_backward = angles::shortest_angular_distance(
-      query_yaw,
-      angles::normalize_angle(goal_yaw + M_PI));
+      query_yaw, angles::normalize_angle(goal_yaw + M_PI));
 
-    bool forward_match = fabs(dyaw_forward) < yaw_goal_tolerance_;
-    bool backward_match = fabs(dyaw_backward) < yaw_goal_tolerance_;
+    bool forward_match = fabs(dyaw_forward) <= yaw_goal_tolerance_;
+    bool backward_match = fabs(dyaw_backward) <= yaw_goal_tolerance_;
 
     return forward_match || backward_match;
   } else {
-    // Standard behavior: only accept the specified goal orientation
     double dyaw = angles::shortest_angular_distance(query_yaw, goal_yaw);
-    return fabs(dyaw) < yaw_goal_tolerance_;
+    return fabs(dyaw) <= yaw_goal_tolerance_;
   }
 }
 
@@ -184,8 +176,6 @@ SimpleGoalChecker::dynamicParametersCallback(std::vector<rclcpp::Parameter> para
     } else if (type == ParameterType::PARAMETER_BOOL) {
       if (name == plugin_name_ + ".stateful") {
         stateful_ = parameter.as_bool();
-      } else if (name == plugin_name_ + ".symmetric_yaw_tolerance") {
-        symmetric_yaw_tolerance_ = parameter.as_bool();
       } else if (name == plugin_name_ + ".symmetric_yaw_tolerance") {
         symmetric_yaw_tolerance_ = parameter.as_bool();
       }
